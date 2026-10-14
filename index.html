@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Interactive Quiz - Physical Layer & Signals</title>
+<h1 style="position: absolute; top: 0; left: 50%; transform: translateX(-50%); margin-top: 10px; white-space: nowrap; color: white;">
+  Computer Networks Module 3
+</h1>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, 'Segoe UI', Tahoma, sans-serif; }
+  body {
+    background: #3b3f44;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 16px;
+  }
+  .card {
+    background: #ffffff;
+    width: 100%;
+    max-width: 720px;
+    border-radius: 20px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.08);
+    padding: 28px 26px;
+  }
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 16px;
+  }
+  .progress {
+    background: #e2e8f0;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-weight: 600;
+    color: #1e293b;
+  }
+  .question {
+    font-size: 19px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+  .options { display: flex; flex-direction: column; gap: 10px; }
+  .option {
+    background: #f8fafc;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    font-size: 15px;
+    color: #1e293b;
+    cursor: pointer;
+    transition: 0.15s;
+    text-align: left;
+    line-height: 1.5;
+  }
+  .option:hover:not(.locked) { background: #eff6ff; border-color: #93c5fd; }
+  .option.correct {
+    background: #dcfce7;
+    border-color: #22c55e;
+    color: #14532d;
+    font-weight: 600;
+  }
+  .option.wrong {
+    background: #fee2e2;
+    border-color: #ef4444;
+    color: #7f1d1d;
+  }
+  .option.locked { cursor: default; }
+  .explanation {
+    margin-top: 18px;
+    background: #eff6ff;
+    border-left: 5px solid #3b82f6;
+    border-radius: 10px;
+    padding: 14px 16px;
+    font-size: 15px;
+    color: #1e3a8a;
+    line-height: 1.7;
+  }
+  .explanation strong { color: #1d4ed8; }
+  .nav-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+  }
+  .navbtn {
+    flex: 1;
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .prevbtn {
+    background: #e2e8f0;
+    color: #334155;
+  }
+  .prevbtn:hover:not(:disabled) { background: #cbd5e1; }
+  .nextbtn {
+    background: #2563eb;
+    color: #fff;
+  }
+  .nextbtn:hover:not(:disabled) { background: #1d4ed8; }
+  .navbtn:disabled { background: #f1f5f9; color: #94a3b8; cursor: not-allowed; }
+  .final {
+    text-align: center;
+    padding: 20px 0;
+  }
+  .final h2 { font-size: 26px; color: #0f172a; margin-bottom: 10px; }
+  .final p { font-size: 18px; color: #475569; margin-bottom: 20px; }
+  .restart {
+    padding: 12px 28px;
+    background: #16a34a;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .restart:hover { background: #15803d; }
+  .hidden { display: none; }
+</style>
+</head>
+<body>
+
+<div class="card" id="app"></div>
+
+<script>
+/* ============ Questions Data ============ */
+const questions = [
+  // ---- Set 1: Physical Layer Communication Scenario & Jitter ----
+  { q: "1. In the physical layer communication scenario provided in the text, what is the name of the research company where Alice works?",
+    options: ["A) National ISP", "B) Scientific Books", "C) Sky Research", "D) Switched WAN"],
+    correct: 2,
+    explanation: "The scenario involves a scientist named Alice working in a research company called Sky Research." },
+  { q: "2. In the physical layer communication scenario, from which online bookseller does Alice need to order a book?",
+    options: ["A) Sky Research", "B) Scientific Books", "C) National Books", "D) WAN Books"],
+    correct: 1,
+    explanation: "Alice needs to order a book related to her research from an online bookseller named Scientific Books." },
+  { q: "3. Based on the legend in the physical layer communication diagram, what type of connection links the local routers (e.g., R1, R2) to the rest of the network?",
+    options: ["A) LAN switch", "B) Point-to-point WAN", "C) Switched WAN", "D) National ISP"],
+    correct: 1,
+    explanation: "The legend indicates that the dashed lines represent a Point-to-point WAN." },
+  { q: "4. Which performance characteristic is listed fifth in the network performance evaluation list, right after Jitter?",
+    options: ["A) Throughput", "B) Bandwidth-Delay Product", "C) Propagation speed", "D) Signal-to-Noise Ratio"],
+    correct: 1,
+    explanation: "The five characteristics are: 1. Bandwidth, 2. Throughput, 3. Latency (Delay), 4. Jitter, 5. Bandwidth-Delay Product." },
+  { q: "5. In the example diagram of a digital signal with two levels, how many bits are sent in 1 second?",
+    options: ["A) 4 bits", "B) 8 bits", "C) 16 bits", "D) 32 bits"],
+    correct: 1,
+    explanation: "The diagram showing a digital signal with two levels illustrates 8 bits sent in 1 second, making the bit rate 8 bps." },
+  { q: "6. In the example diagram of a digital signal with four levels, how many bits are sent in 1 second?",
+    options: ["A) 4 bits", "B) 8 bits", "C) 16 bits", "D) 32 bits"],
+    correct: 2,
+    explanation: "The diagram showing a digital signal with four levels illustrates 16 bits sent in 1 second, making the bit rate 16 bps." },
+  { q: "7. In the provided frequency-domain plot for a sine wave with a frequency of 6 Hz and peak amplitude of 5 V, how is the signal represented visually?",
+    options: ["A) As a continuous wavy line", "B) As multiple spikes at 1, 3, 6, 9, and 12 Hz", "C) As a single vertical spike at the 6 Hz mark reaching 5 V", "D) As a flat horizontal line at 5 V"],
+    correct: 2,
+    explanation: "In the frequency domain, the sine wave is shown as a single vertical spike at the 6 Hz mark with a height corresponding to the peak value of 5 V." },
+  { q: "8. According to the jitter example in Figure 9, what is the expected arrival time interval for every packet?",
+    options: ["A) Every 8 ms", "B) Every 12 ms", "C) Every 20 ms", "D) Every 32 ms"],
+    correct: 2,
+    explanation: "With a constant packet transmission rate, every packet is expected to arrive at the destination exactly every 20 ms." },
+  { q: "9. In the specific jitter example (Figure 9), how long did it actually take for packet two (P2) to arrive, and how late was it?",
+    options: ["A) It took 20 ms and arrived on time.", "B) It took 32 ms and arrived 12 ms late.", "C) It took 25 ms and arrived 5 ms late.", "D) It took 8 ms and arrived 12 ms early."],
+    correct: 1,
+    explanation: "Packet two (P2) arrived 12 ms later than expected, taking 32 ms instead of the expected 20 ms." },
+  { q: "10. In the specific jitter example (Figure 9), how long did it actually take for packet four (P4) to arrive, and how late was it?",
+    options: ["A) It took 20 ms and arrived on time.", "B) It took 32 ms and arrived 12 ms late.", "C) It took 25 ms and arrived 5 ms late.", "D) It took 8 ms and arrived 12 ms early."],
+    correct: 2,
+    explanation: "Packet four (P4) arrived 5 ms late, taking 25 ms instead of the expected 20 ms." },
+  { q: "11. In the specific jitter example (Figure 9), which packets arrived exactly when expected?",
+    options: ["A) P2 and P4", "B) P1 and P3", "C) P1 and P2", "D) P3 and P4"],
+    correct: 1,
+    explanation: "Figure 9 shows packet one (P1) and packet three (P3) arriving when expected." },
+
+  // ---- Set 2: Layers, Analog/Digital, Signals & Impairments ----
+  { q: "12. According to the communication scenario at the physical layer, which layers are present in a router?",
+    options: ["A) Application, Transport, and Network", "B) Network, Data-link, and Physical", "C) Data-link and Physical", "D) Application, Transport, Network, Data-link, and Physical"],
+    correct: 1,
+    explanation: "A router operates using the Network, Data-link, and Physical layers." },
+  { q: "13. In a physical layer communication scenario, which layers are present in a LAN switch?",
+    options: ["A) Application, Transport, and Network", "B) Network, Data-link, and Physical", "C) Data-link and Physical", "D) Physical only"],
+    correct: 2,
+    explanation: "A LAN switch utilizes the Data-link and Physical layers." },
+  { q: "14. How is analog data defined?",
+    options: ["A) Information that has discrete states", "B) Information that is continuous", "C) Information that is limited to 1s and 0s", "D) Information that has no time domain"],
+    correct: 1,
+    explanation: "Analog data refers to information that is continuous." },
+  { q: "15. How is digital data defined?",
+    options: ["A) Information that changes continuously over time", "B) Information that has infinite levels of intensity", "C) Information that has discrete states", "D) Information that oscillates in a sine wave"],
+    correct: 2,
+    explanation: "Digital data refers to information that has discrete states." },
+  { q: "16. Which of the following is provided as an example of analog data?",
+    options: ["A) A digital clock suddenly changing from 8:05 to 8:06", "B) A router forwarding discrete packets", "C) An analog clock with continuous movements of its hands", "D) A signal with a limited number of defined values"],
+    correct: 2,
+    explanation: "An analog clock gives information in a continuous form through the continuous movements of its hands, serving as an example of analog data." },
+  { q: "17. Which characteristic describes an analog signal?",
+    options: ["A) It can have only a limited number of defined values.", "B) It has infinitely many levels of intensity over a period of time.", "C) It changes suddenly from one state to another.", "D) It can only represent data as 1s and 0s."],
+    correct: 1,
+    explanation: "An analog signal has infinitely many levels of intensity over a period of time, passing through an infinite number of values as it moves from value A to value B." },
+  { q: "18. Which characteristic describes a digital signal?",
+    options: ["A) It passes through an infinite number of values over time.", "B) It is continuous and infinitely rolling.", "C) It can have only a limited number of defined values, often as simple as 1 and 0.", "D) It exhibits smooth and consistent changes over a cycle."],
+    correct: 2,
+    explanation: "A digital signal can have only a limited number of defined values, which are often as simple as 1 and 0." },
+  { q: "19. What defines a periodic signal?",
+    options: ["A) It changes without exhibiting a pattern.", "B) It completes a pattern within a measurable time frame and repeats that pattern over identical periods.", "C) It only operates in the frequency domain.", "D) It consists entirely of discrete, non-repeating states."],
+    correct: 1,
+    explanation: "A periodic signal completes a pattern within a measurable time frame, called a period, and repeats that pattern over subsequent identical periods." },
+  { q: "20. What is a cycle in the context of a periodic signal?",
+    options: ["A) The distance a signal travels in one second", "B) The completion of one full pattern", "C) The absolute value of the highest intensity", "D) The range of frequencies a channel can pass"],
+    correct: 1,
+    explanation: "The completion of one full pattern in a periodic signal is called a cycle." },
+  { q: "21. What does the period (T) of a signal refer to?",
+    options: ["A) The number of cycles completed in one second", "B) The difference between the highest and lowest frequencies", "C) The amount of time, in seconds, a signal needs to complete 1 cycle", "D) The absolute peak amplitude of the wave"],
+    correct: 2,
+    explanation: "Period (T) refers to the amount of time, in seconds, a signal needs to complete one cycle." },
+  { q: "22. What characterizes a nonperiodic signal?",
+    options: ["A) It repeats a cycle over identical time frames.", "B) It changes without exhibiting a pattern or cycle that repeats over time.", "C) It consists of exactly one sine wave.", "D) It has a bandwidth of exactly 0 Hz."],
+    correct: 1,
+    explanation: "A nonperiodic signal changes without exhibiting a pattern or cycle that repeats over time." },
+  { q: "23. Which types of signals can be periodic or nonperiodic?",
+    options: ["A) Only analog signals", "B) Only digital signals", "C) Both analog and digital signals", "D) Neither analog nor digital signals"],
+    correct: 2,
+    explanation: "Both analog and digital signals can be periodic or nonperiodic." },
+  { q: "24. What is the most fundamental form of a periodic analog signal?",
+    options: ["A) A digital pulse", "B) A square wave", "C) A nonperiodic burst", "D) A sine wave"],
+    correct: 3,
+    explanation: "The sine wave is the most fundamental form of a periodic analog signal." },
+  { q: "25. How is a sine wave visualized over the course of a cycle?",
+    options: ["A) As a sharp spike of high energy", "B) As a set of discrete values like 1 and 0", "C) As a smooth and consistent curve, forming a continuous, rolling flow", "D) As a sudden drop in voltage"],
+    correct: 2,
+    explanation: "A sine wave visualized as an oscillating curve has changes over the course of a cycle that are smooth and consistent, described as a continuous, rolling flow." },
+  { q: "26. What are the three parameters that represent a sine wave?",
+    options: ["A) Amplitude, frequency, and throughput", "B) Peak amplitude, frequency, and phase", "C) Wavelength, jitter, and noise", "D) Bit rate, bit length, and period"],
+    correct: 1,
+    explanation: "A sine wave can be represented by three parameters: the peak amplitude, the frequency, and the phase." },
+  { q: "27. What does the peak amplitude of a signal measure?",
+    options: ["A) The absolute value of its highest intensity", "B) The number of cycles per second", "C) The amount of phase shift from time zero", "D) The distance a signal travels in one period"],
+    correct: 0,
+    explanation: "The peak amplitude of a signal is the absolute value of its highest intensity." },
+  { q: "28. What property of a signal is proportional to its peak amplitude?",
+    options: ["A) The distance it travels", "B) The time it takes to complete one cycle", "C) The energy it carries", "D) Its bandwidth"],
+    correct: 2,
+    explanation: "The peak amplitude is proportional to the energy the signal carries." },
+  { q: "29. What is the standard unit of measurement for the peak amplitude of electric signals?",
+    options: ["A) Hertz (Hz)", "B) Watts (W)", "C) Volts (V)", "D) Seconds (s)"],
+    correct: 2,
+    explanation: "For electric signals, peak amplitude is normally measured in volts (V)." },
+  { q: "30. How is frequency defined?",
+    options: ["A) The time required to complete one cycle", "B) The absolute value of the highest signal intensity", "C) The number of cycles in 1 second", "D) The distance a signal travels in one period"],
+    correct: 2,
+    explanation: "Frequency refers to the number of cycles in 1 second." },
+  { q: "31. What is the standard unit of frequency?",
+    options: ["A) Radians (rad)", "B) Volts (V)", "C) Hertz (Hz)", "D) Seconds (s)"],
+    correct: 2,
+    explanation: "The unit of frequency is Hertz (Hz)." },
+  { q: "32. What is the equivalent unit for 10^3 Hz?",
+    options: ["A) Kilohertz (kHz)", "B) Megahertz (MHz)", "C) Gigahertz (GHz)", "D) Terahertz (THz)"],
+    correct: 0,
+    explanation: "10^3 Hz is equivalent to Kilohertz (kHz)." },
+  { q: "33. What is the equivalent unit for 10^6 Hz?",
+    options: ["A) Kilohertz (kHz)", "B) Megahertz (MHz)", "C) Gigahertz (GHz)", "D) Terahertz (THz)"],
+    correct: 1,
+    explanation: "10^6 Hz is equivalent to Megahertz (MHz)." },
+  { q: "34. What is the equivalent unit for 10^9 Hz?",
+    options: ["A) Kilohertz (kHz)", "B) Megahertz (MHz)", "C) Gigahertz (GHz)", "D) Terahertz (THz)"],
+    correct: 2,
+    explanation: "10^9 Hz is equivalent to Gigahertz (GHz)." },
+  { q: "35. What is the equivalent unit for 10^12 Hz?",
+    options: ["A) Kilohertz (kHz)", "B) Megahertz (MHz)", "C) Gigahertz (GHz)", "D) Terahertz (THz)"],
+    correct: 3,
+    explanation: "10^12 Hz is equivalent to Terahertz (THz)." },
+  { q: "36. What is the equivalent duration for one millisecond (ms)?",
+    options: ["A) 10^-3 s", "B) 10^-6 s", "C) 10^-9 s", "D) 10^-12 s"],
+    correct: 0,
+    explanation: "A millisecond (ms) is equivalent to 10^-3 s." },
+  { q: "37. What is the equivalent duration for one microsecond (us)?",
+    options: ["A) 10^-3 s", "B) 10^-6 s", "C) 10^-9 s", "D) 10^-12 s"],
+    correct: 1,
+    explanation: "A microsecond (us) is equivalent to 10^-6 s." },
+  { q: "38. What is the equivalent duration for one nanosecond (ns)?",
+    options: ["A) 10^-3 s", "B) 10^-6 s", "C) 10^-9 s", "D) 10^-12 s"],
+    correct: 2,
+    explanation: "A nanosecond (ns) is equivalent to 10^-9 s." },
+  { q: "39. What is the equivalent duration for one picosecond (ps)?",
+    options: ["A) 10^-3 s", "B) 10^-6 s", "C) 10^-9 s", "D) 10^-12 s"],
+    correct: 3,
+    explanation: "A picosecond (ps) is equivalent to 10^-12 s." },
+  { q: "40. How many microseconds (us) are in 100 milliseconds (ms)?",
+    options: ["A) 10^3 us", "B) 10^4 us", "C) 10^5 us", "D) 10^6 us"],
+    correct: 2,
+    explanation: "100 ms is equivalent to 100 × 10^3 μs, which equals 10^5 μs." },
+  { q: "41. How many seconds are in 1 minute?",
+    options: ["A) 3600 seconds", "B) 100 seconds", "C) 60 seconds", "D) 10 seconds"],
+    correct: 2,
+    explanation: "1 minute equals 60 seconds." },
+  { q: "42. How many nanoseconds (ns) are in 1 microsecond (us)?",
+    options: ["A) 10", "B) 100", "C) 1000", "D) 10000"],
+    correct: 2,
+    explanation: "1 microsecond equals 1000 nanoseconds (ns)." },
+  { q: "43. What does the term phase, or phase shift, describe?",
+    options: ["A) The maximum intensity of a signal", "B) The position of the waveform relative to time 0", "C) The distance a signal travels in one cycle", "D) The number of bits transmitted per second"],
+    correct: 1,
+    explanation: "The term phase, or phase shift, describes the position of the waveform relative to time 0." },
+  { q: "44. How can phase shift be visualized?",
+    options: ["A) As the widening or narrowing of the amplitude", "B) As the amount a wave is shifted backward or forward along the time axis", "C) As a transition from continuous values to discrete values", "D) As a reduction in peak voltage over distance"],
+    correct: 1,
+    explanation: "Phase describes the amount of shift if the wave is thought of as being shifted backward or forward along the time axis." },
+  { q: "45. In what units is phase measured?",
+    options: ["A) Hertz or bps", "B) Volts or Watts", "C) Degrees or radians", "D) Seconds or cycles"],
+    correct: 2,
+    explanation: "Phase is measured in degrees or radians." },
+  { q: "46. A phase shift of 360 degrees corresponds to a shift of what fraction of a period?",
+    options: ["A) 1/4 of a period", "B) 1/2 of a period", "C) A complete period", "D) 2 complete periods"],
+    correct: 2,
+    explanation: "A phase shift of 0° / 360° corresponds to a shift of a complete period/cycle." },
+  { q: "47. A phase shift of 90 degrees corresponds to a shift of what fraction of a period?",
+    options: ["A) 1/4 of a period", "B) 1/2 of a period", "C) 3/4 of a period", "D) A complete period"],
+    correct: 0,
+    explanation: "A phase shift of 90° corresponds to a shift of 1/4 of a period/cycle." },
+  { q: "48. A phase shift of 180 degrees corresponds to a shift of what fraction of a period?",
+    options: ["A) 1/4 of a period", "B) 1/2 of a period", "C) 3/4 of a period", "D) A complete period"],
+    correct: 1,
+    explanation: "A phase shift of 180° corresponds to a shift of 1/2 of a period/cycle." },
+  { q: "49. What does phase explicitly indicate regarding a waveform?",
+    options: ["A) The attenuation loss", "B) The status of the first cycle", "C) The bandwidth product", "D) The noise power"],
+    correct: 1,
+    explanation: "Phase indicates the status of the first cycle." },
+  { q: "50. What is the phase in degrees of a sine wave that is shifted 1/6 of a cycle with respect to time 0?",
+    options: ["A) 30 degrees", "B) 60 degrees", "C) 90 degrees", "D) 120 degrees"],
+    correct: 1,
+    explanation: "1 complete cycle is 360°. Therefore, 1/6 cycle is 1/6 × 360 = 60°." },
+  { q: "51. What is the phase in radians of a sine wave that is shifted 1/6 of a cycle with respect to time 0?",
+    options: ["A) π/2 rad", "B) π/3 rad", "C) π/4 rad", "D) π/6 rad"],
+    correct: 1,
+    explanation: "A shift of 60° equals 60 × 2π/360 rad, which equals π/3 rad or 1.046 rad." },
+  { q: "52. What does wavelength measure?",
+    options: ["A) The number of waves in a one-second interval", "B) The absolute peak amplitude of the signal", "C) The distance a simple signal can travel in one period", "D) The range of frequencies inside a composite signal"],
+    correct: 2,
+    explanation: "Wavelength is the distance a simple signal can travel in one period." },
+  { q: "53. What relationship does wavelength establish?",
+    options: ["A) It binds the signal's bandwidth to its throughput.", "B) It binds the period or frequency of a simple sine wave to the propagation speed of the medium.", "C) It binds the phase shift to the signal's attenuation.", "D) It binds the amplitude directly to the signal-to-noise ratio."],
+    correct: 1,
+    explanation: "Wavelength binds the period or the frequency of a simple sine wave to the propagation speed of the medium." },
+  { q: "54. Which parameters comprehensively define a sine wave?",
+    options: ["A) Bandwidth, throughput, and jitter", "B) Period, wavelength, and propagation speed", "C) Amplitude, frequency, and phase", "D) Attenuation, distortion, and noise"],
+    correct: 2,
+    explanation: "A sine wave is comprehensively defined by its amplitude, frequency, and phase." },
+  { q: "55. What relationship does a time-domain plot display?",
+    options: ["A) Changes in signal amplitude with respect to time", "B) Changes in frequency with respect to phase", "C) Peak value with respect to frequency", "D) Bandwidth with respect to propagation speed"],
+    correct: 0,
+    explanation: "A time-domain plot shows changes in signal amplitude with respect to time." },
+  { q: "56. Which of the following parameters is NOT explicitly shown on a time-domain plot?",
+    options: ["A) Amplitude", "B) Time", "C) Period", "D) Phase"],
+    correct: 3,
+    explanation: "Phase is not explicitly shown on a time-domain plot." },
+  { q: "57. What does a frequency-domain plot display?",
+    options: ["A) Amplitude changes continuously over time", "B) Peak value and frequency", "C) The exact phase shift of each composite wave", "D) The physical wavelength of the signal"],
+    correct: 1,
+    explanation: "A frequency-domain plot is concerned with only the peak value and the frequency." },
+  { q: "58. What is the definition of bandwidth?",
+    options: ["A) The number of cycles per second of a single sine wave", "B) The range of frequencies contained in a composite signal", "C) The physical length of the transmission medium", "D) The absolute value of the highest intensity signal"],
+    correct: 1,
+    explanation: "Bandwidth is the range of frequencies contained in a composite signal." },
+  { q: "59. What is a composite signal composed of?",
+    options: ["A) A single continuous sine wave", "B) Multiple sine waves", "C) Pure direct current (DC)", "D) High and low discrete voltages exclusively"],
+    correct: 1,
+    explanation: "A composite signal is composed of multiple sine waves." },
+  { q: "60. How is bandwidth normally calculated mathematically?",
+    options: ["A) By multiplying the highest and lowest frequencies", "B) By dividing the peak frequency by the phase", "C) As a difference between two numbers (highest and lowest frequencies)", "D) By integrating the time-domain plot over one cycle"],
+    correct: 2,
+    explanation: "Bandwidth is normally a difference between two numbers; for example, the highest frequency minus the lowest frequency." },
+  { q: "61. If a composite signal contains frequencies between 1000 Hz and 5000 Hz, what is its bandwidth?",
+    options: ["A) 1000 Hz", "B) 3000 Hz", "C) 4000 Hz", "D) 6000 Hz"],
+    correct: 2,
+    explanation: "The bandwidth is the difference between the frequencies: 5000 - 1000, or 4000." },
+  { q: "62. If a periodic signal is decomposed into five sine waves with frequencies of 100, 300, 500, 700, and 900 Hz, what is its bandwidth?",
+    options: ["A) 100 Hz", "B) 800 Hz", "C) 900 Hz", "D) 2500 Hz"],
+    correct: 1,
+    explanation: "Let f_h be the highest frequency (900 Hz) and f_l the lowest frequency (100 Hz). The bandwidth B = 900 - 100 = 800 Hz." },
+  { q: "63. In addition to analog representation, how else can information be represented by a signal?",
+    options: ["A) By infinite continuous domains only", "B) By a digital signal (0 or 1)", "C) By wavelength distortion only", "D) By purely thermal noise"],
+    correct: 1,
+    explanation: "Information can also be represented by a digital signal (0 or 1)." },
+  { q: "64. If a digital signal has more than two levels, what is the benefit?",
+    options: ["A) The signal perfectly replicates an analog clock.", "B) The signal completely eliminates attenuation.", "C) The signal can send more than 1 bit for each level.", "D) The signal becomes periodic."],
+    correct: 2,
+    explanation: "A digital signal can have more than two levels. In this case, more than 1 bit can be sent for each level." },
+  { q: "65. Are most digital signals periodic or nonperiodic?",
+    options: ["A) Mostly periodic", "B) Mostly nonperiodic", "C) Always periodic", "D) They alternate between the two evenly"],
+    correct: 1,
+    explanation: "Most digital signals are nonperiodic, and thus period or frequency is not appropriate characteristics." },
+  { q: "66. Because frequency and period are inappropriate for digital signals, which two terms are used instead?",
+    options: ["A) Wavelength and Phase", "B) Bit interval and Bit rate", "C) Time-domain and Frequency-domain", "D) Attenuation and Distortion"],
+    correct: 1,
+    explanation: "Two new terms—bit interval and bit rate—are used to describe digital signals instead of period and frequency." },
+  { q: "67. What is the definition of bit interval?",
+    options: ["A) The number of bits sent in one second", "B) The physical distance a bit travels", "C) The time required to send one single bit", "D) The loss of energy over distance"],
+    correct: 2,
+    explanation: "Bit interval is the time required to send one single bit." },
+  { q: "68. What is the definition of bit rate?",
+    options: ["A) The number of bit intervals per second, or bits sent in one second", "B) The time required to send a composite signal", "C) The maximum amplitude of a digital signal", "D) The total delay encountered by a packet"],
+    correct: 0,
+    explanation: "Bit rate is the number of bit intervals per second, i.e., the number of bits sent in one second." },
+  { q: "69. What unit is used to express bit rate?",
+    options: ["A) Hertz (Hz)", "B) Volts (V)", "C) Decibels (dB)", "D) Bits per second (bps)"],
+    correct: 3,
+    explanation: "Bit rate is expressed as bps (bits per second)." },
+  { q: "70. What does bit length define for a digital signal?",
+    options: ["A) The number of bits in one packet", "B) The distance one bit occupies on the transmission medium", "C) The amount of time taken to process a bit", "D) The number of voltage levels used to encode a bit"],
+    correct: 1,
+    explanation: "The bit length is the distance one bit occupies on the transmission medium." },
+  { q: "71. Why does signal impairment occur?",
+    options: ["A) Because digital signals have no period", "B) Because signals travel through transmission media which are not perfect", "C) Because bandwidth is strictly limited to 4 kHz", "D) Because packets always arrive too early"],
+    correct: 1,
+    explanation: "Signals travel through transmission media, which are not perfect, and this imperfection causes signal impairment." },
+  { q: "72. What is the result of transmission impairment on a signal?",
+    options: ["A) The signal becomes perfectly periodic.", "B) The signal at the beginning of the medium is exactly the same as at the end.", "C) The signal at the beginning of the medium is not the same as the signal at the end.", "D) The signal automatically splits into multiple frequency bands."],
+    correct: 2,
+    explanation: "Impairment means that the signal at the beginning of the medium is not the same as the signal at the end of the medium (what is sent is not what is received)." },
+  { q: "73. What are the three causes of transmission impairment?",
+    options: ["A) Throughput, latency, and jitter", "B) Frequency, amplitude, and phase", "C) Attenuation, distortion, and noise", "D) Bandwidth, bit rate, and wavelength"],
+    correct: 2,
+    explanation: "Three causes of impairment are attenuation, distortion, and noise." },
+  { q: "74. What is the definition of attenuation?",
+    options: ["A) A change in the shape of a signal", "B) A loss of energy", "C) The introduction of random extra signals", "D) A phase shift due to propagation delay"],
+    correct: 1,
+    explanation: "Attenuation means a loss of energy." },
+  { q: "75. Why does a signal lose energy through attenuation?",
+    options: ["A) It moves too fast.", "B) It overcomes the resistance of the medium.", "C) It has a high signal-to-noise ratio.", "D) It encounters an amplifier."],
+    correct: 1,
+    explanation: "When a signal travels through a medium, it loses some of its energy in overcoming the resistance of the medium." },
+  { q: "76. Into what form is some of the electrical energy converted due to resistance in a wire?",
+    options: ["A) Light", "B) Phase shift", "C) Thermal noise", "D) Heat"],
+    correct: 3,
+    explanation: "Some of the electrical energy in the signal is converted to heat, which is why a wire gets warm." },
+  { q: "77. What device is used to compensate for the loss of energy caused by attenuation?",
+    options: ["A) A router", "B) A multiplexer", "C) An amplifier", "D) A play-out buffer"],
+    correct: 2,
+    explanation: "To compensate for this loss, amplifiers are used to amplify the signal." },
+  { q: "78. What does distortion mean in the context of transmission impairment?",
+    options: ["A) The signal completely disappears.", "B) The signal changes its form or shape.", "C) The signal loses its total energy to heat.", "D) The signal encounters a sudden spike from lightning."],
+    correct: 1,
+    explanation: "Distortion means that the signal changes its form or shape." },
+  { q: "79. In which type of signal does distortion typically occur?",
+    options: ["A) A purely digital DC signal", "B) A composite signal made of different frequencies", "C) A single, uninterrupted sine wave", "D) An analog clock's signal"],
+    correct: 1,
+    explanation: "Distortion can occur in a composite signal made of different frequencies." },
+  { q: "80. Why do the components of a composite signal arrive at the destination with different delays?",
+    options: ["A) Because they undergo thermal noise.", "B) Because each signal component has its own propagation speed through a medium.", "C) Because queuing times are inherently random.", "D) Because amplifiers introduce arbitrary delays."],
+    correct: 1,
+    explanation: "Each signal component has its own propagation speed through a medium and, therefore, its own delay in arriving at the final destination." },
+  { q: "81. What effect do differences in delay have on a composite signal if the delay is not exactly the same as the period duration?",
+    options: ["A) They increase the peak amplitude.", "B) They transform an analog signal into a digital signal.", "C) They may create a difference in phase.", "D) They eliminate the need for an amplifier."],
+    correct: 2,
+    explanation: "Differences in delay may create a difference in phase if the delay is not exactly the same as the period duration." },
+  { q: "82. What is thermal noise?",
+    options: ["A) A spike in energy from a power line", "B) The effect of one wire on the other", "C) Noise coming from motors and appliances", "D) The random motion of electrons in a wire"],
+    correct: 3,
+    explanation: "Thermal noise is the random motion of electrons in a wire, which creates an extra signal not originally sent by the transmitter." },
+  { q: "83. Where does induced noise primarily come from?",
+    options: ["A) The resistance of the medium", "B) Sources such as motors and appliances", "C) The random motion of electrons", "D) Power lines and lightning"],
+    correct: 1,
+    explanation: "Induced noise comes from sources such as motors and appliances." },
+  { q: "84. What is crosstalk?",
+    options: ["A) The random motion of electrons", "B) The loss of energy to heat", "C) The effect of one wire on the other", "D) A high-energy spike in a very short time"],
+    correct: 2,
+    explanation: "Crosstalk is the effect of one wire on the other." },
+  { q: "85. What is impulse noise?",
+    options: ["A) A continuous low-level hum from appliances", "B) The random motion of electrons", "C) A spike (a signal with high energy in a very short period of time)", "D) Interference strictly between parallel wires"],
+    correct: 2,
+    explanation: "Impulse noise is a spike (a signal with high energy in a very short period of time) that comes from power lines, lightning." },
+  { q: "86. What ratio is needed to find the theoretical bit rate limit?",
+    options: ["A) The ratio of phase to amplitude", "B) The ratio of the signal power to the noise power", "C) The ratio of propagation speed to wavelength", "D) The ratio of attenuation to distortion"],
+    correct: 1,
+    explanation: "To find the theoretical bit rate limit, we need to know the ratio of the signal power to the noise power (SNR)." },
+  { q: "87. Why does the calculation of SNR rely on the average signal power and average noise power?",
+    options: ["A) Because peak power cannot be measured in volts.", "B) Because both signal power and noise power may change with time.", "C) Because noise power is completely constant.", "D) Because average values eliminate phase shifts."],
+    correct: 1,
+    explanation: "We need to consider the average signal power and the average noise power because these may change with time." },
+  { q: "88. What does a high Signal-to-Noise Ratio (SNR) indicate?",
+    options: ["A) The signal is more corrupted by noise.", "B) The signal is completely free of all impairment.", "C) The signal is less corrupted by noise.", "D) The medium has infinite bandwidth."],
+    correct: 2,
+    explanation: "A high SNR means the signal is less corrupted by noise." },
+  { q: "89. How is SNR described in decibel units?",
+    options: ["A) SNR_dB = 10 log10 SNR", "B) SNR_dB = 20 log10 SNR", "C) SNR_dB = SNR × 10", "D) SNR_dB = 10^SNR"],
+    correct: 0,
+    explanation: "SNR is often described in decibel units, SNR_dB, defined as 10 log10 SNR." },
+  { q: "90. If the power of a signal is 10,000 uW and the power of the noise is 1 uW, what is the value of SNR?",
+    options: ["A) 1,000", "B) 10,000", "C) 40", "D) 10"],
+    correct: 1,
+    explanation: "The SNR = 10,000 μW / 1 μW = 10,000." },
+  { q: "91. If the SNR of a transmission is 10,000, what is the value of SNR_dB?",
+    options: ["A) 10", "B) 20", "C) 30", "D) 40"],
+    correct: 3,
+    explanation: "SNR_dB = 10 log10 10,000 = 10 log10 10^4 = 40." },
+  { q: "92. Which of the following is NOT listed as a characteristic used to judge network performance?",
+    options: ["A) Bandwidth", "B) Throughput", "C) Attenuation", "D) Jitter"],
+    correct: 2,
+    explanation: "Network performance is judged based on Bandwidth, Throughput, Latency, Jitter, and Bandwidth-Delay Product. Attenuation is an impairment, not a performance metric." },
+  { q: "93. What does bandwidth in hertz refer to?",
+    options: ["A) The number of bits per second a channel can transmit", "B) The range of frequencies that a channel can pass", "C) The exact physical length of the medium", "D) The total delay experienced by a message"],
+    correct: 1,
+    explanation: "Bandwidth in hertz refers to the range of frequencies that a channel can pass." },
+  { q: "94. What is the standard bandwidth of a subscriber telephone line provided as an example?",
+    options: ["A) 100 Mbps", "B) 4 kHz", "C) 1 GHz", "D) 200 kbps"],
+    correct: 1,
+    explanation: "The bandwidth of a subscriber telephone line is 4 kHz." },
+  { q: "95. What does bandwidth in bits per second (bps) refer to?",
+    options: ["A) The range of frequencies that a channel can pass", "B) The physical wavelength of the bit on the medium", "C) The number of bits per second that a channel, link, or network can transmit", "D) The amount of energy converted into heat"],
+    correct: 2,
+    explanation: "Bandwidth in bps refers to the number of bits per second that a channel, a link, or even a network can transmit." },
+  { q: "96. In the context of performance, what is throughput?",
+    options: ["A) The theoretical maximum bandwidth of a link in Hertz", "B) The measure of how much data we can actually send through a network", "C) The amount of time it takes to process a bit", "D) The specific amount of phase shift in a signal"],
+    correct: 1,
+    explanation: "Throughput (bps) is a measure of how much we can send data through a network." },
+  { q: "97. What is the general mathematical relationship between throughput (T) and bandwidth (B) on a link?",
+    options: ["A) T is always strictly greater than B.", "B) T is exactly equal to B at all times.", "C) T is always less than B.", "D) T and B have no defined relationship."],
+    correct: 2,
+    explanation: "We can only send T bps through this link with T always less than B." },
+  { q: "98. If a highway is designed to transmit 1000 cars per minute, but congestion reduces the flow to 100 cars per minute, what does the 1000 cars per minute represent?",
+    options: ["A) Throughput", "B) Bandwidth", "C) Latency", "D) Jitter"],
+    correct: 1,
+    explanation: "In the highway analogy, the design capacity of 1000 cars per minute represents the bandwidth, while the actual 100 cars per minute is the throughput." },
+  { q: "99. If a network with a bandwidth of 10 Mbps passes an average of 12,000 frames per minute, and each frame carries an average of 10,000 bits, what is the throughput?",
+    options: ["A) 1 Mbps", "B) 2 Mbps", "C) 10 Mbps", "D) 12 Mbps"],
+    correct: 1,
+    explanation: "Throughput = (12,000 × 10,000) / 60 = 2,000,000 bps = 2 Mbps." },
+  { q: "100. How is latency (delay) defined?",
+    options: ["A) The time it takes to overcome the wire's resistance", "B) The time required to send a single bit onto the medium", "C) How long it takes for an entire message to completely arrive at the destination from the time the first bit is sent", "D) The variation in packet arrival times"],
+    correct: 2,
+    explanation: "The latency or delay defines how long it takes for an entire message to completely arrive at the destination from the time the first bit is sent out from the source." },
+  { q: "101. Which of the following is one of the four components of latency?",
+    options: ["A) Phase shift", "B) Thermal noise", "C) Propagation time", "D) Jitter"],
+    correct: 2,
+    explanation: "Latency is made of four components: propagation time, transmission time, queuing time, and processing delay." },
+  { q: "102. What are the four components that make up total latency?",
+    options: ["A) Bandwidth, throughput, jitter, delay", "B) Attenuation, distortion, noise, interference", "C) Propagation time, transmission time, queuing time, and processing delay", "D) Amplitude, frequency, phase, wavelength"],
+    correct: 2,
+    explanation: "Latency is made of four components: propagation time, transmission time, queuing time, and processing delay." },
+  { q: "103. When does jitter become a problem in a network?",
+    options: ["A) When all packets experience exactly the same processing delay", "B) When packets encounter different delays and the receiver application is time-sensitive", "C) When the bit rate exceeds the propagation speed", "D) When the network completely switches from digital to analog"],
+    correct: 1,
+    explanation: "Jitter is a problem if different packets of data encounter different delays and the application using the data at the receiver site is time-sensitive (like audio and video data)." },
+  { q: "104. What is the fundamental definition of jitter?",
+    options: ["A) The total time it takes for a message to travel from source to destination", "B) The measure of time between when a packet is expected to arrive to when it actually arrives", "C) The absolute difference between highest and lowest frequencies", "D) The random extra signals added by electrons"],
+    correct: 1,
+    explanation: "Jitter is the measure of time between when a packet is expected to arrive to when it actually arrives." },
+  { q: "105. What is identified as the greatest culprit of jitter?",
+    options: ["A) Play-out buffers", "B) Amplifiers", "C) Queuing variations caused by dynamic changes in network traffic loads", "D) Induced noise from appliances"],
+    correct: 2,
+    explanation: "The greatest culprit of jitter is queuing variations caused by dynamic changes in network traffic loads." },
+  { q: "106. Besides queuing variations, what is another cause of jitter?",
+    options: ["A) Using analog data instead of digital data", "B) Packets taking a different equal-cost link that is not physically the same length", "C) Perfectly stable ambient temperatures", "D) The existence of only two voltage levels"],
+    correct: 1,
+    explanation: "Another cause is packets that might sometimes take a different equal-cost link that is not physically (or electrically) the same length as the other links." },
+  { q: "107. What mechanism do media gateways use to minimize the effects of jitter?",
+    options: ["A) Phase shifters", "B) Voltage amplifiers", "C) Play-out buffers", "D) Wavelength filters"],
+    correct: 2,
+    explanation: "Media gateways have play-out buffers that buffer a packet stream so that the reconstructed voice waveform is not affected by packet jitter." },
+  { q: "108. What happens in a media gateway if severe jitter occurs?",
+    options: ["A) The play-out buffer perfectly corrects all errors.", "B) The gateway might discard packets arriving out of order, starving the buffer and causing gaps in the waveform.", "C) The bandwidth automatically doubles to compensate.", "D) The digital signal is converted back to an analog clock signal."],
+    correct: 1,
+    explanation: "Severe jitter can cause voice quality issues because the media gateway might discard packets arriving out of order. This condition could starve its play-out buffer and cause gaps in the reconstructed waveform." }
+];
+
+/* ============ Quiz Logic ============ */
+const app = document.getElementById('app');
+let currentIndex = 0;
+let score = 0;
+let userAnswers = questions.map(() => ({ selectedIndex: null, answered: false }));
+
+function renderQuestion() {
+  const q = questions[currentIndex];
+  const total = questions.length;
+  const state = userAnswers[currentIndex];
+
+  app.innerHTML = `
+    <div class="topbar">
+      <span>Question ${currentIndex + 1} of ${total}</span>
+      <span class="progress">Score: ${score}</span>
+    </div>
+    <div class="question">${q.q}</div>
+    <div class="options" id="options"></div>
+    <div class="explanation ${state.answered ? '' : 'hidden'}" id="explanation">
+      <strong>✅ Correct Answer:</strong> ${q.options[q.correct]}<br><br>
+      <strong>💡 Explanation:</strong> ${q.explanation}
+    </div>
+    <div class="nav-buttons">
+      <button class="navbtn prevbtn" id="prevBtn" ${currentIndex === 0 ? 'disabled' : ''}>← Previous</button>
+      <button class="navbtn nextbtn" id="nextBtn" ${state.answered ? '' : 'disabled'}>
+        ${currentIndex === total - 1 ? 'Show Results 🎯' : 'Next →'}
+      </button>
+    </div>
+  `;
+
+  const optionsBox = document.getElementById('options');
+  q.options.forEach((opt, i) => {
+    const div = document.createElement('div');
+    div.className = 'option';
+    div.textContent = opt;
+
+    if (state.answered) {
+      div.classList.add('locked');
+      if (i === q.correct) {
+        div.classList.add('correct');
+      } else if (i === state.selectedIndex) {
+        div.classList.add('wrong');
+      }
+    } else {
+      div.onclick = () => selectOption(i, div);
+    }
+    optionsBox.appendChild(div);
+  });
+
+  document.getElementById('nextBtn').onclick = nextQuestion;
+  document.getElementById('prevBtn').onclick = prevQuestion;
+}
+
+function selectOption(index, el) {
+  const state = userAnswers[currentIndex];
+  if (state.answered) return;
+
+  state.answered = true;
+  state.selectedIndex = index;
+  const q = questions[currentIndex];
+  const allOptions = document.querySelectorAll('.option');
+  allOptions.forEach(o => o.classList.add('locked'));
+
+  if (index === q.correct) {
+    el.classList.add('correct');
+    score++;
+  } else {
+    el.classList.add('wrong');
+    allOptions[q.correct].classList.add('correct');
+  }
+
+  document.querySelector('.progress').textContent = `Score: ${score}`;
+  document.getElementById('explanation').classList.remove('hidden');
+  document.getElementById('nextBtn').disabled = false;
+}
+
+function nextQuestion() {
+  if (currentIndex < questions.length - 1) {
+    currentIndex++;
+    renderQuestion();
+  } else {
+    showResults();
+  }
+}
+
+function prevQuestion() {
+  if (currentIndex > 0) {
+    currentIndex--;
+    renderQuestion();
+  }
+}
+
+function showResults() {
+  const total = questions.length;
+  app.innerHTML = `
+    <div class="final">
+      <h2>🎉 Quiz Complete!</h2>
+      <p>Your Score: <strong>${score}</strong> out of <strong>${total}</strong></p>
+      <p>Percentage: ${Math.round((score / total) * 100)}%</p>
+      <button class="restart" id="restartBtn">Restart Quiz ↻</button>
+    </div>
+  `;
+  document.getElementById('restartBtn').onclick = () => {
+    currentIndex = 0;
+    score = 0;
+    userAnswers = questions.map(() => ({ selectedIndex: null, answered: false }));
+    renderQuestion();
+  };
+}
+
+renderQuestion();
+</script>
+</body>
+</html>
